@@ -3,13 +3,17 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Santander ETL Pipeline API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: users
+    description: User management
+  - name: etl
+    description: ETL pipeline operations
 paths:
   /healthz:
     get:
@@ -24,6 +28,114 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get a user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: User not found
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: User deleted
+
+  /etl/run:
+    post:
+      operationId: runEtlPipeline
+      tags: [etl]
+      summary: Run the ETL pipeline to generate AI messages for all users
+      responses:
+        "200":
+          description: ETL pipeline results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EtlRunResult"
+
+  /etl/results:
+    get:
+      operationId: getEtlResults
+      tags: [etl]
+      summary: Get the latest ETL run results
+      responses:
+        "200":
+          description: List of ETL results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EtlResult"
+
+  /etl/stats:
+    get:
+      operationId: getEtlStats
+      tags: [etl]
+      summary: Get ETL pipeline statistics and summary
+      responses:
+        "200":
+          description: ETL statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EtlStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +146,133 @@ components:
       required:
         - status
 
+    Account:
+      type: object
+      properties:
+        number:
+          type: string
+        agency:
+          type: string
+        balance:
+          type: number
+        limit:
+          type: number
+      required:
+        - number
+        - agency
+        - balance
+        - limit
+
+    Card:
+      type: object
+      properties:
+        number:
+          type: string
+        limit:
+          type: number
+      required:
+        - number
+        - limit
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        account:
+          $ref: "#/components/schemas/Account"
+        card:
+          $ref: "#/components/schemas/Card"
+        aiMessage:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - account
+        - card
+        - createdAt
+
+    CreateUserBody:
+      type: object
+      properties:
+        name:
+          type: string
+        accountNumber:
+          type: string
+        accountAgency:
+          type: string
+        accountBalance:
+          type: number
+        accountLimit:
+          type: number
+        cardNumber:
+          type: string
+        cardLimit:
+          type: number
+      required:
+        - name
+        - accountNumber
+        - accountAgency
+        - accountBalance
+        - accountLimit
+        - cardNumber
+        - cardLimit
+
+    EtlResult:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        userName:
+          type: string
+        message:
+          type: string
+        stage:
+          type: string
+          enum: [extracted, transformed, loaded]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - userName
+        - message
+        - stage
+        - createdAt
+
+    EtlRunResult:
+      type: object
+      properties:
+        processed:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/EtlResult"
+      required:
+        - processed
+        - results
+
+    EtlStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalRuns:
+          type: integer
+        lastRunAt:
+          type: ["string", "null"]
+        messagesGenerated:
+          type: integer
+      required:
+        - totalUsers
+        - totalRuns
+        - messagesGenerated
